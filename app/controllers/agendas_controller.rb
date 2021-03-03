@@ -1,6 +1,8 @@
 class AgendasController < ApplicationController
   # before_action :set_agenda, only: %i[show edit update destroy]
   before_action :set_agenda, only: %i[destroy]
+  before_action :authenticate_user!
+
   def index
     @agendas = Agenda.all
   end
@@ -23,9 +25,16 @@ class AgendasController < ApplicationController
   
   def destroy
     path = Rails.application.routes.recognize_path(request.referer)
-    @agenda.destroy
-    #redirect_to dashboard_path
-    redirect_to path
+    @team = @agenda.team
+    @users = @team.members
+
+    if current_user.id == @agenda.user_id || current_user.id == @team.owner_id
+      @agenda.destroy 
+      AssignMailer.assign_mail(@users).deliver
+      redirect_to dashboard_path
+    else
+      redirect_to path
+    end
   end
 
   private
